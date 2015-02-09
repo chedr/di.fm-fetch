@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+from urllib.request import urlopen
+import argparse
+import json
+import math
+import os
+import sys
+
+
+urls_prem = {'di': {'aac': {}, 'mp3': {}}}
+urls_prem['di']['aac'][40] = 'http://listen.di.fm/premium_low'
+urls_prem['di']['aac'][64] = 'http://listen.di.fm/premium_medium'
+urls_prem['di']['aac'][128] = 'http://listen.di.fm/premium'
+urls_prem['di']['mp3'][256] = 'http://listen.di.fm/premium_high'
+
+urls_free = {'di': {'aac': {}, 'mp3': {}}}
+urls_free['di']['aac'][40] = 'http://listen.di.fm/public2'
+urls_free['di']['aac'][64] = 'http://listen.di.fm/public1'
+urls_free['di']['mp3'][96] = 'http://listen.di.fm/public3'
+
+
+def get_url(args):
+	if args.key:
+		url_map = urls_prem[args.source][args.codec]
+		if not args.quality:
+			args.quality = 128 if args.codec == 'aac' else 256
+	elif args.quality is None:
+		args.quality = {('di', 'aac'): 64, ('di', 'mp3'): 96}[(args.source, args.codec)]
+	url_map = urls_free[args.source][args.codec]
+	return url_map[args.quality] if args.quality in url_map else None
+
+
+def process_pls(channel, key):
+	url = channel['playlist']
+	if key:
+		url += '?%s' % key
+	return urlopen(url).readall().decode('utf-8')
+
+
+def get_progress(x, y):
+	PROGRESS_BAR_LEN = 50
+	complete = math.ceil(PROGRESS_BAR_LEN * (x / y))
+	remaining = PROGRESS_BAR_LEN - complete
+	bar = ("=" * (complete - 1) if complete > 0 else "") + ">" + (" " * remaining)
+	return "[%s] %d%%" % (bar, (x + 1) / y * 100)
+
+
+def main():
+	parser = argparse.ArgumentParser(description='Extract DI.fm playlists')
+	parser.add_argument('-o', '--outputdir', default='.', help='Output directory.  Default: "."')
+	parser.add_argument('-s', '--source', default='di', choices=['di'], help='Playlist source, DI.fm.  Default: "di"')
+	parser.add_argument('-c', '--codec', default='aac', choices=['mp3', 'aac'], help='Audio codec.  Default: "aac"')
+	parser.add_argument('-q', '--quality', choices=[40, 64, 128, 96, 256], type=int, help='Bitrate in kbps.  Default: highest possible given codec and free / premium constraints.')
+	parser.add_argument('-k', '--key', help='Your premium Listen Key.')
+	parser.add_argument('-l', '--long', action='store_true', default=False, help='Use the full channel title for the filename instead of the short name.')
+	args = parser.parse_args()
+
+	url = get_url(args)
+	print('Source\t: %s.fm' % args.source.swapcase())
+	print('Codec\t: %s' % args.codec.swapcase())
+	print('Bitrate\t: %dkbps' % args.quality)
+	print('Key\t: %s' % args.key)
+	print('URL\t: %s' % url)
+	print()
+
+	if not url:
+		print('Playlists not available for the specified source, codec, and quality.')
+		return 1
+
+	print('Retrieving JSON playlist info...')
+	channels = json.loads(urlopen(url).readall().decode('utf-8'))
+
+
+	get_title = lambda pls: pls.get('playlist', 'Title1')
+	n_channels = len(channels)
+	for i in range(n_channels):
+		print('\r%s' % get_progress(i, n_channels), end="", flush=True)
+		pls = process_pls(channels[i], args.key)
+		filename = '%s.pls' % (get_title(pls) if args.long else channels[i]['key'])
+		if not os.path.exists(args.outputdir):
+			os.mkdir(args.outputdir)
+		with open(args.outputdir + os.sep + filename, 'w') as f:
+			f.write(pls)
+	print()
+	return 0
+
+
+if __name__ == '__main__':
+	sys.exit(main())
+
