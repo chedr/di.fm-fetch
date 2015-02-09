@@ -1,4 +1,7 @@
 #DI.fm Parser
+
+Python3 Digitally Imported playlist parser based on [chuckatkins/DI.fm-PlaylistParser](https://github.com/chuckatkins/DI.fm-PlaylistParser/)
+
 ```
 usage: di.fm-fetch [-h] [-o OUTPUTDIR] [-s {di}] [-c {mp3,aac}]
                    [-q {40,64,128,96,256}] [-k KEY] [-l]
