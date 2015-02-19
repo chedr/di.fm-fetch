@@ -47,7 +47,7 @@ def get_progress(x, y):
 
 def main():
 	parser = argparse.ArgumentParser(description='Extract DI.fm playlists')
-	parser.add_argument('-o', '--outputdir', default='.', help='Output directory.  Default: "."')
+	parser.add_argument('-o', '--output-dir', default='.', help='Output directory.  Default: "."')
 	parser.add_argument('-s', '--source', default='di', choices=['di'], help='Playlist source, DI.fm.  Default: "di"')
 	parser.add_argument('-c', '--codec', default='aac', choices=['mp3', 'aac'], help='Audio codec.  Default: "aac"')
 	parser.add_argument('-q', '--quality', choices=[40, 64, 128, 96, 256], type=int, help='Bitrate in kbps.  Default: highest possible given codec and free / premium constraints.')
@@ -77,9 +77,9 @@ def main():
 		print('\r%s' % get_progress(i, n_channels), end="", flush=True)
 		pls = process_pls(channels[i], args.key)
 		filename = '%s.pls' % (get_title(pls) if args.long else channels[i]['key'])
-		if not os.path.exists(args.outputdir):
-			os.mkdir(args.outputdir)
-		with open(args.outputdir + os.sep + filename, 'w') as f:
+		if not os.path.exists(args.output_dir):
+			os.mkdir(args.output_dir)
+		with open(args.output_dir + os.sep + filename, 'w') as f:
 			f.write(pls)
 	print()
 	return 0
